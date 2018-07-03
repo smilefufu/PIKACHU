@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="PIKACHU",
-    version="0.0.1",
+    version="0.0.2",
     author="smilefufu",
     author_email="fufu.bluesand@gmail.com",
     description="a PIKA based, Cuter and more Human queue Utility (´_ゝ`)",

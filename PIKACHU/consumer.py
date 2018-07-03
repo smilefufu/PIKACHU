@@ -1,6 +1,7 @@
 import json
 import pika
 
+from PIKACHU import utils
 
 class Envelope(object):
     def __init__(self, channel, basic_deliver, properties, body):
@@ -17,15 +18,13 @@ class Envelope(object):
 
 
 class SimpleConsumer(object):
-    def __init__(self, url, namespace="pikachu"):
+    EXCHANGE_TYPE = "direct"
+    def __init__(self, url, namespace=None):
         self._url = url
         self._connection = pika.BlockingConnection(pika.URLParameters(url))
         self._channel = self._connection.channel()
-        exchange_type = "direct"
-        self._queue_name = routing_key = exchange = "{}.{}".format(namespace, exchange_type)
-        self._channel.exchange_declare(exchange=exchange, exchange_type=exchange_type, durable=True)
-        self._queue = self._channel.queue_declare(self._queue_name, durable=True)
-        self._channel.queue_bind(self._queue_name, exchange, routing_key)
+        self._queue_name = utils.make_queue_name(namespace or "pikachu", self.EXCHANGE_TYPE)
+        self._channel.queue_declare(self._queue_name, durable=True)
         
 
     def get(self, max_len=100):
@@ -49,9 +48,11 @@ class SimpleAsyncConsumer(object):
     _connection = None
     _channel = None
     _consume_mode = None
+    EXCHANGE_TYPE = "direct"
     def __init__(self, url, namespace=None, tornado_mode=False):
         self._url = url
         self._namespace = namespace or "pikachu"
+        # self.exchange = utils.make_exchange_name(self._namespace, self.EXCHANGE_TYPE)
         self.Connection = pika.TornadoConnection if tornado_mode else pika.SelectConnection
 
     def _connect(self):
@@ -76,9 +77,6 @@ class SimpleAsyncConsumer(object):
         :callback: on message callback, callback(Envelope), will pass an Envelope object to the callback.
         :return: the ioloop
         """
-        self.exchange_type = "topic"
-        self.exchange_type = "direct"
-        self.exchange = "{}.{}".format(self._namespace, self.exchange_type)
         self.callback = callback_on_message
         connection = self._connect()
         return connection.ioloop
@@ -93,24 +91,10 @@ class SimpleAsyncConsumer(object):
 
     def __on_channel_open(self, channel):
         self._channel.add_on_close_callback(self.__on_channel_closed)
-        self._channel.exchange_declare(
-            callback=self.__on_exchange_declareok,
-            exchange=self.exchange,
-            exchange_type=self.exchange_type,
-            durable=True)
-
-    def __on_exchange_declareok(self, frame):
-        self._channel.queue_declare(self.__on_queue_declareok, durable=True)
+        # consumer don't need to declare the exchage or bind queue to exchange
+        queue_name = utils.make_queue_name(self._namespace, self.EXCHANGE_TYPE)
+        self._channel.queue_declare(self.__on_queue_declareok, queue=queue_name, durable=True)
 
     def __on_queue_declareok(self, method_frame):
-        self._queue_name = method_frame.method.queue
-        routing_key = self.exchange
-        self._channel.queue_bind(self.__on_bindok, self._queue_name, self.exchange, routing_key)
-
-    def __on_bindok(self, frame):
-        # start consuming
-        self._consume_tag = self._channel.basic_consume(self.__on_message, queue=self._queue_name, no_ack=False)
-
-    # def subscript(self, namespace=None, categories=[]):
-    #     namespace = 
-    #     pass
+        queue_name = utils.make_queue_name(self._namespace, self.EXCHANGE_TYPE)
+        self._consume_tag = self._channel.basic_consume(self.__on_message, queue=queue_name, no_ack=False)

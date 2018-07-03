@@ -7,6 +7,6 @@ import settings
 consumer = PIKACHU.SimpleAsyncConsumer(settings.amqp)
 def cb(envelope):
     print("get message:", envelope.message)
-    # envelope.message_read()
+    envelope.message_read()
 ioloop = consumer.start_listen(cb)
 ioloop.start()

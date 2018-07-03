@@ -7,6 +7,7 @@ if sys.version_info > (3, 0):
     from PIKACHU.utils.py3 import Single
 else:
     from PIKACHU.utils.py2 import Single
+from PIKACHU import utils
 
 
 """
@@ -30,6 +31,8 @@ class SimpleProducor(Single):
     """
     _connection = None
     _channel = None
+    EXCHANGE_TYPE = "direct"
+
     def __init__(self, url, namespace=None):
         self._url = url
         self._namespace = namespace or "pikachu"
@@ -51,18 +54,24 @@ class SimpleProducor(Single):
         :message: the message to put in queue, dict.
         """
         assert isinstance(message, dict), "Message only support dict"
-        exchange_type = "direct"
-        exchange = "{}.{}".format(self._namespace, exchange_type)
         body = json.dumps(message)
-        routing_key = queue_name = exchange
+        exchange = utils.make_exchange_name(self._namespace, self.EXCHANGE_TYPE)
+        routing_key = utils.make_direct_key(self._namespace)
+        queue_name = utils.make_queue_name(self._namespace, self.EXCHANGE_TYPE)
         channel = self.__ensure_channel()
-        channel.exchange_declare(exchange=exchange, exchange_type=exchange_type, durable=True)
+        channel.exchange_declare(exchange=exchange, exchange_type=self.EXCHANGE_TYPE, durable=True)
         channel.queue_declare(queue=queue_name, durable=True)  # make sure the queue is created.
+        binding_key = routing_key  # direct mode only match routing_key with binding_key, they should be the same
+        channel.queue_bind(queue_name, exchange, binding_key)
         channel.confirm_delivery()
         return channel.basic_publish(
             exchange=exchange,
             routing_key=routing_key,
             body=body,
             properties=pika.BasicProperties(delivery_mode=2,))
+
+
+class BroadCaster(object):
+    pass
 
 # TODO: BroadCaster, StreamProducor
