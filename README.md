@@ -16,7 +16,7 @@ for envelope in PIKACHU.SimpleConsumer("amqp://localhost").get():
     envelope.message_read()
 ```
 
-### use listen to listen message arrival constantly:
+### use listener to listen message arrival constantly:
 
 ```python
 def callback(envelope):
