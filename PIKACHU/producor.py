@@ -46,6 +46,7 @@ class SimpleProducor(Single):
         if self._channel is None or not self._channel.is_open:
             self.__ensure_connection()
             self._channel = self._connection.channel()
+            self._channel.confirm_delivery()
         return self._channel
 
     def put(self, message):
@@ -63,7 +64,6 @@ class SimpleProducor(Single):
         channel.queue_declare(queue=queue_name, durable=True)  # make sure the queue is created.
         binding_key = routing_key  # direct mode only match routing_key with binding_key, they should be the same
         channel.queue_bind(queue_name, exchange, binding_key)
-        channel.confirm_delivery()
         return channel.basic_publish(
             exchange=exchange,
             routing_key=routing_key,
