@@ -43,7 +43,7 @@ class SimpleProducor(Single):
         return self._connection
 
     def __ensure_channel(self):
-        if self._channel is None or not self._channel.is_open:
+        if self._channel is None or not self._channel.is_open or self._connection is None or not self._connection.is_open:
             self.__ensure_connection()
             self._channel = self._connection.channel()
             self._channel.confirm_delivery()

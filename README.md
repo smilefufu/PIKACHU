@@ -8,7 +8,7 @@ import PIKACHU
 PIKACHU.SimpleProducor("amqp://localhost").put(dict(data="some message"))
 ```
 
-### get a message from queue:
+### get some messages from queue:
 
 ```python
 for envelope in PIKACHU.SimpleConsumer("amqp://localhost").get():
