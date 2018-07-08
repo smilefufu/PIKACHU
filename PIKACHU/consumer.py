@@ -1,8 +1,12 @@
 import json
 import time
+import logging
+
 import pika
 
 from PIKACHU import utils
+
+logger = logging.getLogger(__name__)
 
 class Envelope(object):
     def __init__(self, channel, basic_deliver, properties, body):
@@ -53,7 +57,6 @@ class SimpleAsyncConsumer(object):
         self._url = url
         self._namespace = namespace or "pikachu"
         self._tornado_mode = tornado_mode
-        # self.exchange = utils.make_exchange_name(self._namespace, self.EXCHANGE_TYPE)
         self.Connection = pika.TornadoConnection if tornado_mode else pika.SelectConnection
 
     def _connect(self):
@@ -64,19 +67,18 @@ class SimpleAsyncConsumer(object):
             on_close_callback=self.__on_connection_close)
 
     def _reconnect(self, tried_times=0):
-        print("Reconnect, times: {}".format(tried_times))
+        logger.info("Reconnect, times: {}".format(tried_times))
         if self._connection and self._connection.is_open:
-            print("Already connected, abort.")
+            logger.info("Already connected, abort.")
             return
         if tried_times >= 5:
-            print("Reconnect fail! Retry too many times.")
+            logger.info("Reconnect fail! Retry too many times.")
             return
         self._connection = self._connect()
         try:
             if not self._tornado_mode:
                 self._connection.ioloop.start()
             else:
-                # waittime, function
                 self._connection.add_timeout(tried_times*5, lambda : self._reconnect(tried_times=tried_times+1))
         except pika.exceptions.AMQPConnectionError:
             time.sleep(tried_times*5)
@@ -85,9 +87,7 @@ class SimpleAsyncConsumer(object):
 
     def __on_connection_close(self, connection, reply_code, reply_text):
         self._channel = None
-        print('connection {} closed for reason [{}: {}], reconnect in 5s...'.format(connection, reply_code, reply_text))
-        # self._connection.add_timeout(3, self._reconnect)
-        # self._connection.ioloop.start()
+        logger.info('connection {} closed for reason [{}: {}], reconnect in 5s...'.format(connection, reply_code, reply_text))
         if self._tornado_mode:
             self._connection.add_timeout(5, self._reconnect)
         else:
@@ -108,13 +108,13 @@ class SimpleAsyncConsumer(object):
         return connection.ioloop
 
     def __on_connection_open(self, connection):
-        print("Connected!")
+        logger.info("Connected!")
         self._connection = connection
         self._channel = connection.channel(on_open_callback=self.__on_channel_open)
 
     def __on_channel_closed(self, channel, reply_code, reply_text):
-        print("Channel {} is closed for readon [{}:{}]".format(channel, reply_code, reply_text))
-        # self._connection.close()
+        logger.info("Channel {} is closed for readon [{}:{}]".format(channel, reply_code, reply_text))
+        # try reopen channel if connection is still open
         if self._connection and self._connection.is_open:
             self._channel = self._connection.channel(on_open_callback=self.__on_channel_open)
 

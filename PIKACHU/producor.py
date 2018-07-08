@@ -1,5 +1,6 @@
 import sys
 import json
+import logging
 
 import pika
 
@@ -8,13 +9,14 @@ if sys.version_info > (3, 0):
 else:
     from PIKACHU.utils.py2 import Single
 from PIKACHU import utils
+logger = logging.getLogger(__name__)
 
 
 """
 Plan: 
 1. SimpleProducor/SimpleConsumer use direct exchange_type, message durable and acknowledge is enabled.
    SimpleConsumer is synchronous consumer, SimpleAsyncConsumer is asynchronous consumer
-2. BroadCaster/Receiver use fanout exchange_type, for a broadcast/receive pattern. 
+2. Publisher/Subscriber use fanout exchange_type, for a publish/subscribe pattern. 
    Message won't resend if an receiver miss or not ack an message.
 3. StreamProducor/StreamConsumer use topic exchange_type, suitable for a topic based multi stream
    subscript pattern (one producor, many consumers with filter).
@@ -36,17 +38,24 @@ class SimpleProducor(Single):
     def __init__(self, url, namespace=None):
         self._url = url
         self._namespace = namespace or "pikachu"
+        self.__prepare_channel()
 
-    def __ensure_connection(self):
-        if self._connection is None or not self._connection.is_open:
-            self._connection = pika.BlockingConnection(pika.URLParameters(self._url))
-        return self._connection
+    def __prepare_channel(self):
+        self._connection = pika.BlockingConnection(pika.URLParameters(self._url))
+        self._channel = self._connection.channel()
+        self._channel.confirm_delivery()
+        return self._channel
 
     def __ensure_channel(self):
-        if self._channel is None or not self._channel.is_open or self._connection is None or not self._connection.is_open:
-            self.__ensure_connection()
-            self._channel = self._connection.channel()
-            self._channel.confirm_delivery()
+        if self._connection.is_closed or self._channel.is_closed:
+            self.__prepare_channel()
+        else:
+            # detect server disconnect
+            try:
+                self._connection.process_data_events()
+            except pika.exceptions.ConnectionClosed:
+                logger.info("Connection closed by server, try reconnect.")
+                self.__prepare_channel()
         return self._channel
 
     def put(self, message):
@@ -71,7 +80,4 @@ class SimpleProducor(Single):
             properties=pika.BasicProperties(delivery_mode=2,))
 
 
-class BroadCaster(object):
-    pass
-
-# TODO: BroadCaster, StreamProducor
+# TODO: Publisher, StreamProducor
