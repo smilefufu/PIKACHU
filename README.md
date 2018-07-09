@@ -1,5 +1,5 @@
 # PIKACHU
-a PIKA based, Cuter and more Human queue Utility (´_ゝ`)
+a PIKA based, Cuter and more Human rabbitmq queue Utility (´_ゝ`)
 
 ## Simple to use
 ### put a message into queue(independent by namespace):
