@@ -35,4 +35,8 @@ ioloop.start()
 ```bash
 pip install git+https://github.com/smilefufu/PIKACHU@master
 ```
+or from pypi
+```bash
+pip install PI-KA-CHU
+```
 
