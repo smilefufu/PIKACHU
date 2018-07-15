@@ -61,7 +61,7 @@ The base class of all async consumer. Considering nearly all business scene need
 - namespace: Namespace for different business. Non-necessary paramter, default value is "pikachu".
 - tornado_mode: If True, the consumer will use pika.TornadoConnection, which use same ioloop as tornado. Default value is False, a pika.SelectConnection is used, so PIKACHU has it's own ioloop, users have to merge their ioloop with PIKACHU's ioloop if they have one.
 
-###PIKACHU.SimpleConsumer
+### PIKACHU.SimpleConsumer
 
 Same parameters as PIKACHU.Producer
 
