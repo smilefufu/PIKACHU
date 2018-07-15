@@ -49,7 +49,7 @@ class SimpleConsumer(object):
         return envelopes
         
 
-class SimpleAsyncConsumer(object):
+class AsyncConsumer(object):
     _connection = None
     _channel = None
     EXCHANGE_TYPE = "direct"
@@ -94,32 +94,28 @@ class SimpleAsyncConsumer(object):
             time.sleep(5)
             self._reconnect()
 
-    def __on_message(self, channel, basic_deliver, properties, body):
-        message = Envelope(channel, basic_deliver, properties, body)
-        self.callback(message)
-
-    def start_listen(self, callback_on_message):
-        """
-        :callback: on message callback, callback(Envelope), will pass an Envelope object to the callback.
-        :return: the ioloop
-        """
-        self.callback = callback_on_message
-        connection = self._connect()
-        return connection.ioloop
 
     def __on_connection_open(self, connection):
         logger.info("Connected!")
         self._connection = connection
-        self._channel = connection.channel(on_open_callback=self.__on_channel_open)
+        self._channel = connection.channel(on_open_callback=self._on_channel_open)
+        self._channel.add_on_close_callback(self.__on_channel_closed)
 
     def __on_channel_closed(self, channel, reply_code, reply_text):
         logger.info("Channel {} is closed for readon [{}:{}]".format(channel, reply_code, reply_text))
         # try reopen channel if connection is still open
         if self._connection and self._connection.is_open:
-            self._channel = self._connection.channel(on_open_callback=self.__on_channel_open)
+            self._channel = self._connection.channel(on_open_callback=self._on_channel_open)
 
-    def __on_channel_open(self, channel):
-        self._channel.add_on_close_callback(self.__on_channel_closed)
+    def _on_channel_open(self, channel):
+        # Inheritors should implement this method to do things after channel open.
+        pass
+
+
+class SimpleAsyncConsumer(AsyncConsumer):
+    EXCHANGE_TYPE = "direct"
+
+    def _on_channel_open(self, channel):
         # consumer don't need to declare the exchage or bind queue to exchange
         queue_name = utils.make_queue_name(self._namespace, self.EXCHANGE_TYPE)
         self._channel.queue_declare(self.__on_queue_declareok, queue=queue_name, durable=True)
@@ -127,3 +123,48 @@ class SimpleAsyncConsumer(object):
     def __on_queue_declareok(self, method_frame):
         queue_name = utils.make_queue_name(self._namespace, self.EXCHANGE_TYPE)
         self._consume_tag = self._channel.basic_consume(self.__on_message, queue=queue_name, no_ack=False)
+
+    def __on_message(self, channel, basic_deliver, properties, body):
+        message = Envelope(channel, basic_deliver, properties, body)
+        self.callback(message)
+    
+    def start_listen(self, callback_on_message):
+        """
+        :callback_on_message: on message callback, callback(Envelope), will pass an Envelope object to the callback.
+        :return: the ioloop
+        """
+        self.callback = callback_on_message
+        connection = self._connect()
+        return connection.ioloop
+
+
+# TODO: TEST THE CODE!!!
+class Receiver(AsyncConsumer):
+    EXCHANGE_TYPE = "fanout"
+
+    def _on_channel_open(self, channel):
+        channel.exchange_declare(exchange=self.exchange_name, exchange_type=self.EXCHANGE_TYPE, durable=True)
+        channel.queue_declare(self.__on_queue_declareok, exclusive=True)
+        
+
+    def __on_queue_declareok(self, method_frame):
+        self._queue_name = method_frame.method.queue
+        self._channel.queue_bind(callback=self.__on_bindok, exchange=self.exchange_name, queue=self._queue_name)
+
+    def __on_bindok(self, frame):
+        self._channel.basic_consume(self.__on_message, queue=self._queue_name, no_ack=True)
+
+    def __on_message(self, channel, basic_deliver, properties, body):
+        message = Envelope(channel, basic_deliver, properties, body)
+        self.callback(message)
+
+    def subscribe(self, callback_on_message, from_hub=None):
+        """
+        Subscribe message from a hub.
+        :callback_on_message: on message callback, callback(Envelope), will pass an Envelope object to the callback.
+        :from_hub: the message hub name, where the subscriber subscribe message from.
+        """
+        self.callback = callback_on_message
+        self.exchange_name = utils.make_exchange_name(self._namespace, self.EXCHANGE_TYPE, extra=from_hub)
+        connection = self._connect()
+        return connection.ioloop

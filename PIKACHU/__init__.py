@@ -1,6 +1,6 @@
-from PIKACHU.producor import SimpleProducor
-from PIKACHU.consumer import SimpleConsumer, SimpleAsyncConsumer
+from PIKACHU.producor import SimpleProducor, BroadCaster
+from PIKACHU.consumer import SimpleConsumer, SimpleAsyncConsumer, Receiver
 
 name = "PI-KA-CHU"
-version = "0.1.0"
+version = "0.2.0"
 author  = "fufu"
