@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 """
 Plan: 
-2. Publisher/Subscriber use fanout exchange_type, for a publish/subscribe pattern. 
-   Message won't resend if an receiver miss or not ack an message.
 3. StreamProducor/StreamConsumer use topic exchange_type, suitable for a topic based multi stream
    subscript pattern (one producor, many consumers with filter).
 4. Only SimpleConsumer has a synchronous version, other consumer/receiver are all asynchronous, 
@@ -33,6 +31,10 @@ class Producor(Single):
     _channel = None
 
     def __init__(self, url, namespace=None):
+        """
+        :url: amqp url to connect to rabbitmq
+        :namespace: namespace to distinguish different business
+        """
         self._url = url
         self._namespace = namespace or "pikachu"
         self.__prepare_channel()

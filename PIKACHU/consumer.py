@@ -25,6 +25,10 @@ class Envelope(object):
 class SimpleConsumer(object):
     EXCHANGE_TYPE = "direct"
     def __init__(self, url, namespace=None):
+        """
+        :url: amqp url to connect to rabbitmq
+        :namespace: namespace to distinguish different business
+        """
         self._url = url
         self._connection = pika.BlockingConnection(pika.URLParameters(url))
         self._channel = self._connection.channel()
@@ -54,6 +58,11 @@ class AsyncConsumer(object):
     _channel = None
     EXCHANGE_TYPE = "direct"
     def __init__(self, url, namespace=None, tornado_mode=False):
+        """
+        :url: amqp url to connect to rabbitmq
+        :namespace: namespace to distinguish different business
+        :tornado_mode: if True will share same ioloop with tornado
+        """
         self._url = url
         self._namespace = namespace or "pikachu"
         self._tornado_mode = tornado_mode
