@@ -19,7 +19,7 @@ Plan:
 5. RPC
 """
 
-class Producor(Object):
+class Producor(object):
     """
     Base class for producors.
     """
