@@ -4,39 +4,34 @@ import logging
 
 import pika
 
-if sys.version_info > (3, 0):
-    from PIKACHU.utils.py3 import Single
-else:
-    from PIKACHU.utils.py2 import Single
 from PIKACHU import utils
 logger = logging.getLogger(__name__)
 
 
 """
-Plan: 
+Plan:
 3. StreamProducor/StreamConsumer use topic exchange_type, suitable for a topic based multi stream
    subscript pattern (one producor, many consumers with filter).
-4. Only SimpleConsumer has a synchronous version, other consumer/receiver are all asynchronous, 
+4. Only SimpleConsumer has a synchronous version, other consumer/receiver are all asynchronous,
    cause only SimpleProducor keeps a durable message queue, so it's consumer can be "get" off and on,
    while asynchronous consumers/receivers can only "listen" in an ioloop. That's why synchronous consumer
    only has a get method while asynchronous ones only have start_listen method.
 5. RPC
 """
 
-class Producor(Single):
+class Producor(Object):
     """
     Base class for producors.
     """
     _connection = None
     _channel = None
 
-    def __init__(self, url, namespace=None):
+    def __init__(self, url):
         """
         :url: amqp url to connect to rabbitmq
-        :namespace: namespace to distinguish different business
         """
         self._url = url
-        self._namespace = namespace or "pikachu"
+        self._namespace = "pikachu"
         self.__prepare_channel()
 
     def __prepare_channel(self):
@@ -94,7 +89,7 @@ class BroadCaster(Producor):
     """
     EXCHANGE_TYPE = "fanout"
 
-    def publish(self, message, to_hub=None):
+    def publish(self, message, to_hub=None, namespace=None):
         """
         Publish a message to all subscribers.
         :message: the message to publish, dict.
