@@ -115,7 +115,7 @@ publisher code:
 
 ```python
 import PIKACHU
-publisher = PIKACHU.BroadCaster("amqp://localhost", namespace="CCTV")
+publisher = PIKACHU.BroadCaster("amqp://localhost")
 message = dict(news="today's news")
 publisher.publish(message, to_hub="ten")
 ```
@@ -124,7 +124,7 @@ subscriber code:
 
 ```python
 import PIKACHU
-subscriber = PIKACHU.Receiver("amqp://localhost", namespace="CCTV")
+subscriber = PIKACHU.Receiver("amqp://localhost")
 def cb(envelope):
     print("get news:", envelope.message["news"])
 ioloop = subscriber.subscribe(cb, from_hub="ten")
