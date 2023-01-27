@@ -77,7 +77,7 @@ producor code:
 
 ```python
 import PIKACHU
-producor = PIKACHU.SimpleProducor("amqp://localhost", namespace="my_biz")
+producor = PIKACHU.SimpleProducor("amqp://localhost")
 message = dict(content="some message")
 producor.put(message)
 ```
